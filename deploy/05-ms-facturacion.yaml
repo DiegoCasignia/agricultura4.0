@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ms-facturacion-config
+  namespace: conjunta
+data:
+  DB_HOST: "postgresql-svc.conjunta.svc.cluster.local"
+  DB_NAME: "db_facturacion"
+  RABBITMQ_URL: "amqp://user:password@rabbitmq.conjunta.svc.cluster.local:5672"
+  QUEUE_NAME: "cola_facturacion"
+  CENTRAL_SERVICE_URL: "http://ms-central-service.conjunta.svc.cluster.local"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ms-facturacion-secrets
+  namespace: conjunta
+type: Opaque
+stringData:
+  DB_USER: "postgres"
+  DB_PASSWORD: "Admin123*"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-facturacion
+  namespace: conjunta
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-facturacion
+  template:
+    metadata:
+      labels:
+        app: ms-facturacion
+    spec:
+      containers:
+      - name: ms-facturacion
+        image: diegocasignia/ms-facturacion:1.0.0
+        ports:
+        - containerPort: 8082
+        envFrom:
+        - configMapRef:
+            name: ms-facturacion-config
+        - secretRef:
+            name: ms-facturacion-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-facturacion-service
+  namespace: conjunta
+spec:
+  selector:
+    app: ms-facturacion
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8082

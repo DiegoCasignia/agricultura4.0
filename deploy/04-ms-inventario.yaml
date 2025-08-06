@@ -1,0 +1,59 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ms-inventario-config
+  namespace: conjunta
+data:
+  DB_HOST: "postgresql-svc.conjunta.svc.cluster.local"
+  DB_NAME: "db_inventario"
+  RABBITMQ_URL: "amqp://user:password@rabbitmq.conjunta.svc.cluster.local:5672"
+  QUEUE_NAME: "cola_inventario"
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ms-inventario-secrets
+  namespace: conjunta
+type: Opaque
+stringData:
+  DB_USER: "postgres"
+  DB_PASSWORD: "Admin123*"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ms-inventario
+  namespace: conjunta
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ms-inventario
+  template:
+    metadata:
+      labels:
+        app: ms-inventario
+    spec:
+      containers:
+      - name: ms-inventario
+        image: diegocasignia/ms-inventario:1.0.0
+        ports:
+        - containerPort: 8081
+        envFrom:
+        - configMapRef:
+            name: ms-inventario-config
+        - secretRef:
+            name: ms-inventario-secrets
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ms-inventario-service
+  namespace: conjunta
+spec:
+  selector:
+    app: ms-inventario
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8081
